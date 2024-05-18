@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import { MongoClient, ServerApiVersion } from "mongodb";
 import fs from "fs-extra";
+import { PromptTemplate } from "@langchain/core/prompts";
+import { StructuredOutputParser } from "langchain/output_parsers";
+import { z } from "zod";
 
 const controller = {};
 const trained = [];
@@ -49,11 +52,25 @@ controller.getData = async () => {
 };
 
 controller.askToAI = async (question) => {
-  const content = `I am going to pass you a question with an answer and I want you to answer me only in json format with a percentage of the correctness of that answer to the question and also with an answer that you think is more convenient.
-  Example answer: { 'hit': 80, 'answer': 'This is an example of a response' }
-  Question and answer:
-  Question: '${question.question}'
-  Answer: '${question.answer}'`;
+  const template = `I am going to pass you a question with an answer and I want you to answer me only in json format with a percentage of the correctness of that answer to the question and also with an answer that you think is more convenient.\n{{format_instructions}}\nQuestion: {{question}}\nAnswer: {{answer}}`;
+
+  const prompt = PromptTemplate.fromTemplate(template, {
+    templateFormat: "mustache",
+  });
+
+  const parser = StructuredOutputParser.fromZodSchema(
+    z.object({
+      hit: z.number().describe("Percentage of the correctness of that answer to the question"),
+      answer: z.string()
+        .describe("answer to the question"),
+    })
+  );
+  
+  const formattedPrompt = await prompt.format({
+    question: question.question,
+    answer: question.answer,
+    format_instructions: parser.getFormatInstructions(),
+  });
 
   const data = {
     method: "POST",
@@ -65,7 +82,7 @@ controller.askToAI = async (question) => {
       messages: [
         {
           role: "user",
-          content: content,
+          content: formattedPrompt,
         },
       ],
       temperature: 1,
@@ -87,22 +104,21 @@ controller.askToAI = async (question) => {
       return;
     }
 
-    const content = JSON.parse(parsed.choices[0]?.message?.content);
+    const contentParsed = await parser.parse(parsed.choices[0]?.message?.content);
 
-    console.log("response", parsed);
-
-    if (content?.hit && Number(content.hit) > 50) {
+    if (contentParsed?.hit && Number(contentParsed.hit) > 50) {
       trained.push(question);
     }
 
-    if (content?.answer) {
+    if (contentParsed?.answer) {
       trained.push({
         guilid: "IA",
         language: "en",
         question: question.question,
-        answer: content.answer,
+        answer: contentParsed.answer,
       });
     }
+
   } catch (error) {
     console.error(error);
   }
@@ -112,7 +128,6 @@ controller.trainModelAndExport = async () => {
   const data = await controller.getData();
 
   const onlyEn = data.filter((question) => question.language === "en");
-
 
   await Promise.all(onlyEn.map(async (question) => await controller.askToAI(question)));
 
