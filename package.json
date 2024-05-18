@@ -1,0 +1,46 @@
+{
+  "name": "dark-helper-trainer",
+  "version": "1.0.0",
+  "description": "Trainer for the DarkHelper",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "wiki-trainer": "node ./src/dark-trainer.js",
+    "ai-trainer": "node ./src/ai-train.js"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "keywords": [
+    "nodejs",
+    "typescript"
+  ],
+  "author": "Dm94",
+  "bugs": {
+    "url": "https://github.com/dm94/DarkHelperTrainer/issues"
+  },
+  "homepage": "https://github.com/dm94/DarkHelperTrainer",
+  "dependencies": {
+    "@nlpjs/basic": "^4.27.0",
+    "@nlpjs/lang-en": "^4.26.1",
+    "@nlpjs/lang-es": "^4.26.1",
+    "cld": "^2.9.1",
+    "dotenv": "^16.0.3",
+    "fs-extra": "^11.1.1",
+    "mongodb": "^5.4.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^18.14.1",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "esbuild": "^0.14.54",
+    "eslint": "^8.33.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "prettier": "^2.8.3",
+    "tsx": "^3.12.1",
+    "typescript": "^4.9.5"
+  }
+}

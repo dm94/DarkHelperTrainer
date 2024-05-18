@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "lib": ["esnext"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
+    "outDir": "build",
+    "baseUrl": "src",
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "resolveJsonModule": true,
+    "typeRoots": ["node_modules/@types", "types"],
+    "paths": {
+      "@routes/*": ["routes/*"],
+      "@customtypes/*": ["types/*"],
+      "@services/*": ["services/*"],
+    },
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}
