@@ -117,6 +117,13 @@ controller.askToAI = async (question) => {
         question: question.question,
         answer: contentParsed.answer,
       });
+
+      return {
+        guilid: "IA",
+        language: "en",
+        question: question.question,
+        answer: contentParsed.answer,
+      };
     }
 
   } catch (error) {
@@ -129,7 +136,15 @@ controller.trainModelAndExport = async () => {
 
   const onlyEn = data.filter((question) => question.language === "en");
 
-  await Promise.all(onlyEn.map(async (question) => await controller.askToAI(question)));
+  await onlyEn.reduce(async (previousPromise, question) => {
+    let jobsArray = await previousPromise;
+
+    const trainQuestion = await controller.askToAI(question);
+
+    jobsArray.push(trainQuestion);
+
+    return jobsArray;
+  }, Promise.resolve([]));
 
   fs.writeFile("modelAiTrained.json", JSON.stringify(trained));
 
