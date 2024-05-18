@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import { MongoClient, ServerApiVersion } from "mongodb";
-import fs from "fs-extra";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { StructuredOutputParser } from "langchain/output_parsers";
 import { z } from "zod";
@@ -19,6 +18,20 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+const template = `I am going to pass you a question with an answer and I want you to answer me only in json format with a percentage of the correctness of that answer to the question and also with an answer that you think is more convenient.\n{{format_instructions}}\nQuestion: {{question}}\nAnswer: {{answer}}`;
+
+const prompt = PromptTemplate.fromTemplate(template, {
+  templateFormat: "mustache",
+});
+
+const parser = StructuredOutputParser.fromZodSchema(
+  z.object({
+    hit: z.number().describe("Percentage of the correctness of that answer to the question"),
+    answer: z.string()
+      .describe("answer to the question"),
+  })
+);
 
 controller.addItemsToDatabase = async (items) => {
   try {
@@ -52,20 +65,6 @@ controller.getData = async () => {
 };
 
 controller.askToAI = async (question) => {
-  const template = `I am going to pass you a question with an answer and I want you to answer me only in json format with a percentage of the correctness of that answer to the question and also with an answer that you think is more convenient.\n{{format_instructions}}\nQuestion: {{question}}\nAnswer: {{answer}}`;
-
-  const prompt = PromptTemplate.fromTemplate(template, {
-    templateFormat: "mustache",
-  });
-
-  const parser = StructuredOutputParser.fromZodSchema(
-    z.object({
-      hit: z.number().describe("Percentage of the correctness of that answer to the question"),
-      answer: z.string()
-        .describe("answer to the question"),
-    })
-  );
-  
   const formattedPrompt = await prompt.format({
     question: question.question,
     answer: question.answer,
@@ -97,7 +96,6 @@ controller.askToAI = async (question) => {
 
   try {
     const response = await fetch(`${openAIUrl}/chat/completions`, data);
-
     const parsed = await response.json();
 
     if (!parsed.choices || !parsed.choices[0]?.message?.content) {
@@ -111,19 +109,16 @@ controller.askToAI = async (question) => {
     }
 
     if (contentParsed?.answer) {
-      trained.push({
+      const data = {
         guilid: "IA",
         language: "en",
         question: question.question,
         answer: contentParsed.answer,
-      });
+        originalAnswer: question.answer,
+      }
 
-      return {
-        guilid: "IA",
-        language: "en",
-        question: question.question,
-        answer: contentParsed.answer,
-      };
+      trained.push(data);
+      return data;
     }
 
   } catch (error) {
@@ -133,7 +128,7 @@ controller.askToAI = async (question) => {
 
 controller.trainModelAndExport = async () => {
   const data = await controller.getData();
-
+  let processed = 0;
   const onlyEn = data.filter((question) => question.language === "en");
 
   await onlyEn.reduce(async (previousPromise, question) => {
@@ -142,11 +137,12 @@ controller.trainModelAndExport = async () => {
     const trainQuestion = await controller.askToAI(question);
 
     jobsArray.push(trainQuestion);
+    processed++;
+
+    console.info(`Processed ${processed} from ${onlyEn.length}`)
 
     return jobsArray;
   }, Promise.resolve([]));
-
-  fs.writeFile("modelAiTrained.json", JSON.stringify(trained));
 
   await controller.addItemsToDatabase(trained);
 };

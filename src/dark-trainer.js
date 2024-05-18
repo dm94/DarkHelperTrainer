@@ -4,6 +4,8 @@ import wpTrainer from "./trainers/wp-trainer.js"
 
 const uri = process.env.MONGODB_CONNECTION;
 
+const wiki = process.env.WP_WIKI;
+
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -56,5 +58,5 @@ const trainFromWP = async (domain, language = "en") => {
 
 (async () => {
   await clearDatabase();
-  await trainFromWP("https://darkorbitwiki.com", "en");
+  await trainFromWP(wiki, "en");
 })();
